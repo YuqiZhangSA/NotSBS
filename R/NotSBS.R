@@ -29,7 +29,7 @@
 #' @examples
 #' \dontrun{
 #' # Assuming F_hat is a matrix with time series data as columns:
-#' results_fixed <- NotSBS_not(F_hat = F_hat, m = 3, beta = 0.5, trim = 10,
+#' results_fixed <- NotSBS_not(F_hat = F_hat, m = 3, type = c(4,1,2), beta = 0.5, trim = 10,
 #'                             threshold = 5, method = "fixed",
 #'                             V_shap = "diag", lbd = 20)
 #'
@@ -126,7 +126,9 @@ NotSBS_not <- function(F_hat, m = NULL, beta = NULL, trim = NULL, threshold = NU
 
 
   } else if (method == "oracle") {
-    #if (identical(type, 0)) { m <- 0 } else { m <- length(type) }
+    if (is.null(m)) {
+      if (identical(type, 0)) { m <- 0 } else { m <- length(type) }
+    }
 
     thds <- sort(results$val, decreasing = TRUE)
     selected_threshold <- NA
