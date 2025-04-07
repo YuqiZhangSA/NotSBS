@@ -1,0 +1,15 @@
+Package: NotSBS
+Title: Narrowest-over-threshold & Seeded Binary Segmentation for Change Point Detection in Factor Models
+Version: 0.1.0
+Authors: 
+    person("Yuqi", "Zhang", email = "yuqi.zhang@bristol.ac.uk")
+Description: Implements the NotSBS procedure for detecting multiple change points in large approximate factor models. Includes simulation designs, model selection routines, plotting functions, and evaluation metrics inspired by recent work on high-dimensional structural change.
+License: 
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Suggests: 
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
