@@ -52,7 +52,7 @@ This function performs change point detection on a time series by utilising a ma
 \examples{
 \dontrun{
 # Assuming F_hat is a matrix with time series data as columns:
-results_fixed <- NotSBS_not(F_hat = F_hat, m = 3, beta = 0.5, trim = 10,
+results_fixed <- NotSBS_not(F_hat = F_hat, m = 3, type = c(4,1,2), beta = 0.5, trim = 10,
                             threshold = 5, method = "fixed",
                             V_shap = "diag", lbd = 20)
 
