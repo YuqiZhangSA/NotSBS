@@ -126,7 +126,7 @@ NotSBS_not <- function(F_hat, m = NULL, beta = NULL, trim = NULL, threshold = NU
 
 
   } else if (method == "oracle") {
-    if (identical(type, 0)) { m <- 0 } else { m <- length(type) }
+    #if (identical(type, 0)) { m <- 0 } else { m <- length(type) }
 
     thds <- sort(results$val, decreasing = TRUE)
     selected_threshold <- NA
