@@ -2,7 +2,7 @@
 % Please edit documentation in R/est_factor_number.R
 \name{abc.factor.number}
 \alias{abc.factor.number}
-\title{Estimate the Number of Factors via ABC Criterion}
+\title{Estimate the Number of Factors (Barigozzi, Cho and Trapani (2024))}
 \usage{
 abc.factor.number(
   x,
@@ -39,9 +39,9 @@ With attributes:
 }
 }
 \description{
-Implements the ABC (Adaptive Block Cross-validation) procedure to estimate the number of factors
-in high-dimensional approximate factor models. This method is designed to be stable across a range
-of penalty constants and is suitable for both stationary and change-point models.
+Approach proposed by Alessi et al.(2010) in combination with the three information criteria of Bai and Ng (2002) procedure
+to estimate the number of factors in high-dimensional approximate factor models.
+This method is designed to be stable across a range of penalty constants and is suitable for both stationary and change point models.
 }
 \details{
 This function implements the ABC criterion for factor number estimation as proposed in Barigozzi, Cho, and Trapani (2024).

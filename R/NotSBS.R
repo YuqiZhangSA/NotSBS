@@ -1,10 +1,7 @@
 #' Change Point Detection via NotSBS
 #'
-#' This function performs change point detection on a time series by utilising a matrix of signals,
+#' This function performs change point detection on a time series by utilising a matrix of estimated signals,
 #' \code{F_hat}, and applying either a fixed or an oracle method for threshold selection.
-#' It first seeds intervals based on a minimum length and then computes a candidate change point
-#' within each interval. Depending on the chosen method, it refines the candidate set by applying
-#' a fixed threshold or by an iterative oracle search.
 #'
 #' @param F_hat A numeric matrix of signals where each column corresponds to a time point.
 #' @param m For the oracle method, an integer specifying the expected number of change points.

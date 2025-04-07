@@ -1,8 +1,8 @@
-#' Estimate the Number of Factors via ABC Criterion
+#' Estimate the Number of Factors (Barigozzi, Cho and Trapani (2024))
 #'
-#' Implements the ABC (Adaptive Block Cross-validation) procedure to estimate the number of factors
-#' in high-dimensional approximate factor models. This method is designed to be stable across a range
-#' of penalty constants and is suitable for both stationary and change-point models.
+#' Approach proposed by Alessi et al.(2010) in combination with the three information criteria of Bai and Ng (2002) procedure
+#' to estimate the number of factors in high-dimensional approximate factor models.
+#' This method is designed to be stable across a range of penalty constants and is suitable for both stationary and change point models.
 #'
 #' @param x A matrix of dimension \code{p × n}, where \code{p} is the number of variables and \code{n} the number of time points.
 #' @param r.max Maximum number of factors to consider. If \code{NULL}, defaults to \code{min(50, floor(sqrt(min(n - 1, p)))}.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/single_plot.R
 \name{plot_NotSBS_iterations}
 \alias{plot_NotSBS_iterations}
-\title{Visualise Iterative change point Detection Results}
+\title{Threshold Selection via Single Realisation}
 \usage{
 plot_NotSBS_iterations(
   results,
@@ -35,7 +35,7 @@ A list of ggplot objects corresponding to the selected intervals at each iterati
 }
 \description{
 This function generates a sequence of plots showing the detected change points and their corresponding CUSUM statistics
-across iterations of threshold selection, either using a fixed threshold or an oracle-style search.
+across iterations of threshold selection, either using a fixed threshold or an oracle search.
 }
 \examples{
 \dontrun{

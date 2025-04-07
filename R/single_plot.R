@@ -1,7 +1,7 @@
-#' Visualise Iterative change point Detection Results
+#' Threshold Selection via Single Realisation
 #'
 #' This function generates a sequence of plots showing the detected change points and their corresponding CUSUM statistics
-#' across iterations of threshold selection, either using a fixed threshold or an oracle-style search.
+#' across iterations of threshold selection, either using a fixed threshold or an oracle search.
 #'
 #' @param results A data frame of intervals with estimated change points and associated statistics.
 #'                Must contain columns `st` (start), `ed` (end), `val` (CUSUM value), and `est.cp` (estimated change point).
