@@ -7,6 +7,7 @@
 NotSBS_not(
   F_hat,
   m = NULL,
+  type = NULL,
   beta = NULL,
   trim = NULL,
   threshold = NULL,
@@ -56,7 +57,7 @@ results_fixed <- NotSBS_not(F_hat = F_hat, m = 3, type = c(4,1,2), beta = 0.5, t
                             threshold = 5, method = "fixed",
                             V_shap = "diag", lbd = 20)
 
-results_oracle <- NotSBS_not(F_hat = F_hat, m = 3, beta = 0.5, trim = 10,
+results_oracle <- NotSBS_not(F_hat = F_hat, m = 3, type = c(4,1,2), beta = 0.5, trim = 10,
                              method = "oracle",
                              V_shap = "diag", lbd = 20)
 }
