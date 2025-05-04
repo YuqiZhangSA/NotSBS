@@ -1,107 +1,144 @@
-#' Estimate a Single change point within a Given Interval
+#' Multiple Change Point Estimation within Seeded Intervals
 #'
-#' This function computes a CUSUM-based statistic for detecting a single change point
-#' within the interval \code{[st, ed]} in a multivariate time series matrix.
-#' It compares empirical covariance matrices before and after each candidate point \eqn{k}, adjusted for long-run variance or local estimates.
+#' This function detects multiple change points in the second moment structure of a high-dimensional time series matrix
+#' using a standardised CUSUM statistic.
 #'
-#' @param F_hat A matrix of dimension \eqn{r \times T}, representing the observed time series data with \eqn{r} variables and \eqn{T} time points.
-#' @param st An integer specifying the start index of the interval.
-#' @param ed An integer specifying the end index of the interval.
-#' @param trim A positive integer specifying the trimming parameter to avoid estimating near the boundaries. Requires \code{ed - st > 2 * trim}.
-#' @param V An optional positive-definite covariance matrix for standardising the test statistic. If \code{NULL}, a local estimate is used.
-#' @param window_size An optional integer indicating the local window size used when estimating the covariance matrix for standardisation (only relevant if \code{V = NULL}).
+#' @param x A matrix of dimension \eqn{p \times T}, representing the observed data with \eqn{p} variables and \eqn{T} dimensionality.
+#' @param r An optional integer specifying the number of factors. If \code{NULL}, a default data-driven choice is used.
+#' @param V.diag Logical. If \code{TRUE}, only the diagonal elements of the long-run covariance matrix \eqn{V} are used for standardisation.
+#' @param lrv Logical. If \code{TRUE}, long-run variance estimation is used with HAC weights up to lag \code{n}.
+#' @param n Optional bandwidth for HAC estimation. Default is \code{floor(T^{0.25})}.
+#' @param trim A positive integer specifying the trimming parameter to avoid change point estimation near boundaries.
+#' @param lbd An optional minimum segment length. If \code{NULL}, a default data-adaptive value is used.
 #'
-#' @return A data frame with one row and columns:
+#' @return A data frame with one row per seeded interval and columns:
 #' \describe{
-#'   \item{est.cp}{Estimated location of the change point within \code{[st, ed]}.}
+#'   \item{est.cp}{Estimated location of the change point within the interval.}
 #'   \item{val}{The associated CUSUM statistic value.}
 #'   \item{st}{The interval start index.}
 #'   \item{ed}{The interval end index.}
 #'   \item{trim}{The trimming parameter used.}
 #' }
 #'
-#' @details
-#' For each candidate point \eqn{k \in (st + trim, ed - trim)}, the function computes the difference between
-#' the empirical covariance matrices before and after \eqn{k}. The Frobenius norm (or Mahalanobis distance)
-#' of the vectorised difference is used as a CUSUM score.
-#'
-#' If \code{V} is supplied, it is used for standardisation. Otherwise, the function estimates a local covariance
-#' matrix around each \eqn{k} using a moving window and applies the corresponding inverse for scaling.
-#'
-#' Boundary points are forced to have score zero to prevent spurious maxima near edges.
+#' @seealso \code{\link{find_single_cp}} for the CUSUM computation in a single given interval.
 #'
 #' @examples
 #' \dontrun{
-#' # Example with simulated data
-#' F_hat <- matrix(rnorm(200), nrow = 5)
-#' find_single_cp_std(F_hat, st = 1, ed = 40, trim = 5)
+#' # Simulate a data matrix with a change in factor covariance
+#' p <- 100; T <- 400
+#' x <- matrix(rnorm(p * T), nrow = p)
+#' cusum.fts(x, trim = 12)
 #' }
 #'
 #' @export
 
 
-find_single_cp_std <- function(F_hat, st, ed, trim, V = NULL, window_size = NULL) {
-  stopifnot(ed - st > 2 * trim)
-  T_time <- ncol(F_hat)
 
-  if (is.null(window_size)) {
-    window_size <- floor(T_time^(1/4))
+cusum.fts <- function(x, r = NULL,
+                      V.diag = TRUE, lrv = TRUE,
+                      n = NULL,
+                      trim, lbd = NULL) {
+
+  p <- nrow(x)
+  Time <- ncol(x)
+  if (is.null(r)) {r <- median(abc.factor.number(x)$r[4:6])}
+  if (is.null(lbd)) {lbd <- round(dim(x)[2]^(max(2/5, 1 - min(1, log(dim(x)[1])/log(dim(x)[2])))) * log(dim(x)[2])^1.1)}
+  if (is.null(n)) {n <- floor(dim(x)[2]^0.25)}
+  d <- r * (r + 1) / 2
+
+  sv <- svd(x, nu = 0, nv = r)
+  f_hat <- t(sv$v) * sqrt(Time)
+  ind <- lower.tri(diag(r), diag = TRUE)
+  ff <- matrix(0, nrow = d, ncol = Time)
+  II <- diag(1, r)[ind]
+  for (t in seq_len(Time)) {
+    ftft <- f_hat[,t] %*% t(f_hat[,t])
+    ff[,t] <- (ftft[ind] - II)
   }
 
-  k_range <- (st + trim + 1):(ed - trim)
-  scores <- numeric(length(k_range))
-
-  vech <- function(A) as.matrix(A[upper.tri(A, diag = TRUE)])
-
-  M_ske_list <- vector("list", length(k_range))
-  for (i in seq_along(k_range)) {
-    k <- k_range[i]
-
-    F_left <- F_hat[, (st + 1):k, drop = FALSE]
-    F_right <- F_hat[, (k + 1):ed, drop = FALSE]
-
-    Gamma_F_left <- cov(t(F_left))
-    Gamma_F_right <- cov(t(F_right))
-
-    diff_cov <- Gamma_F_right - Gamma_F_left
-
-    M_ske <- sqrt(((k - st) * (ed - k)) / (ed - st)) * vech(diff_cov)
-    M_ske_list[[i]] <- M_ske
-  }
-
-  if (!is.null(V)) {
-    V_inv <- solve(V)
-    for (i in seq_along(k_range)) {
-      scores[i] <- sqrt(abs(t(M_ske_list[[i]]) %*% V_inv %*% M_ske_list[[i]]))
+  # long‐run variance
+  V <- ff %*% t(ff) / Time # Gamma(0)
+  if (lrv && n >= 1) {
+    for (ell in 1:n) {
+      tmp <- ff[, 1:(Time-ell), drop=FALSE] %*% t(ff[, (1:(Time-ell))+ell, drop=FALSE]) / Time
+      w   <- 1 - ell/(n+1)
+      V   <- V + w*(tmp + t(tmp))
     }
-  } else {
-    scores <- sapply(seq_along(k_range), function(i) {
-      k <- k_range[i]
-      win_idx <- seq(max(1, k - floor(window_size / 2)),
-                     min(T_time, k + floor(window_size / 2)))
-
-      r <- nrow(F_hat)
-      p <- r * (r + 1) / 2
-      diff_series <- matrix(NA, nrow = p, ncol = length(win_idx))
-      for (j in seq_along(win_idx)) {
-        t_idx <- win_idx[j]
-        F_t <- F_hat[, t_idx, drop = FALSE]
-        diff_matrix <- F_t %*% t(F_t) - diag(r)
-        diff_series[, j] <- vech(diff_matrix)
-      }
-
-      local_cov <- if (length(win_idx) > 1) cov(t(diff_series)) else diag(1, p)
-      V_local_inv <- tryCatch(solve(local_cov), error = function(e) diag(1, nrow(local_cov)))
-      sqrt(abs(t(M_ske_list[[i]]) %*% V_local_inv %*% M_ske_list[[i]]))
-    })
   }
 
-  scores[1] <- 0
-  scores[length(k_range)] <- 0
+  flag <- FALSE
+  if (V.diag) {
+    dd <- diag(V)
+    if (min(dd) <= 0) {
+      posmin <- min(dd[dd>0])
+      dd     <- pmax(dd, posmin)
+      flag   <- TRUE
+    }
+    Vhalf_inv <- diag(1/sqrt(dd))
+  } else {
+    eig <- eigen(V, symmetric = TRUE)
+    dd  <- eig$values
+    if (min(dd) <= 0) {
+      posmin <- min(dd[dd>0])
+      dd     <- pmax(dd, posmin)
+      flag   <- TRUE
+    }
+    Vhalf_inv <- diag(1/sqrt(dd), d) %*% t(eig$vectors)
+  }
 
-  best_index <- which.max(scores)
-  best_k <- k_range[best_index]
-  best_score <- scores[best_index]
+  D <- Vhalf_inv %*% ff    # d * Time
 
-  return(data.frame(est.cp = best_k, val = best_score, st = st, ed = ed, trim = trim))
+  intervals <- seeded_intervals(Time, minl = lbd)
+  results <- data.frame()
+  for (i in seq_len(nrow(intervals))) {
+    st <- intervals$st[i]
+    ed <- intervals$ed[i]
+    if ((ed - st) > 2 * trim) {
+      res <- find_single_cp(D, st, ed, trim)
+      results <- rbind(results, res)
+    }
+  }
+
+  return(results)
 }
+
+
+
+
+find_single_cp <- function(D, st, ed, trim) {
+  Ttot <- ncol(D)
+
+  st_i <- max(1, as.integer(st))
+  ed_i <- min(Ttot, as.integer(ed))
+  len  <- ed_i - st_i + 1
+  stopifnot(len > 2 * trim + 1)
+
+  stat <- numeric(len)
+  total <- rowSums(D[, st_i:ed_i, drop = FALSE])
+  lsum  <- numeric(nrow(D))
+
+
+  for (k in seq_len(len - 1)) {
+    lsum <- lsum + D[, st_i + k - 1]
+    rsum <- total - lsum
+    nL   <- k
+    nR   <- len - k
+    diff <- rsum/nR - lsum/nL
+    stat[k] <- sqrt((nL * nR) / len) * sqrt(sum(diff^2))
+  }
+
+  stat[seq_len(trim)]         <- 0
+  stat[(len - trim + 1):len] <- 0
+
+  best_rel <- which.max(stat)
+  best_abs_i <- st_i + best_rel - 1
+
+  data.frame(
+    est.cp = best_abs_i,
+    val    = stat[best_rel],
+    st     = st,
+    ed     = ed,
+    trim   = trim
+  )
+}
+

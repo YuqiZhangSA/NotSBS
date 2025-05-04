@@ -1,94 +1,80 @@
-#' Change Point Detection via NotSBS
+#' Change Point Detection by NotSBS
 #'
-#' This function performs change point detection on a time series by utilising a matrix of estimated signals,
-#' \code{F_hat}, and applying either a fixed or an oracle method for threshold selection.
+#' This function detects change points in high-dimensional time series data using a Narrowest-over-threshold principle under seeded binary segmentation
+#' (NotSBS) approach based on a standardised CUSUM statistic.
 #'
-#' @param F_hat A numeric matrix of signals where each column corresponds to a time point.
-#' @param m For the oracle method, an integer specifying the expected number of change points.
-#'          Ignored if \code{method} is not \code{"oracle"}. Note: if \code{m} is not provided,
-#'          internal logic may adjust it based on the supplied \code{type} (if available).
-#' @param beta A numeric value intended to inform the seeding of intervals; currently not actively used
-#'             in the interval selection.
-#' @param trim A positive numeric value specifying the trimming length; only intervals with length greater
-#'             than \code{2 * trim} will be considered.
-#' @param threshold A numeric threshold for the fixed method. Must be supplied if \code{method = "fixed"}.
-#' @param method A character string specifying the threshold selection method. Choices are \code{"fixed"},
-#'               \code{"oracle"} and \code{"none"}.
-#' @param V_shap (Optional) A character string indicating the form of the variance estimator to use.
-#'               Choices are \code{"diag"}, \code{"full"}, or \code{"non"}. If not supplied, no variance
-#'               correction is applied.
-#' @param lbd A numeric value specifying the minimum length for the seeded intervals (often set as a multiple
-#'              of \code{trim}).
+#' @param x A numeric matrix of dimension \eqn{p \times T}, representing the observed data, where \eqn{p} is the number of series
+#'          and \eqn{T} the number of time points.
+#' @param type An optional numeric vector used to determine the number of change points if \code{m} is not explicitly provided.
+#'             If \code{type = 0}, the method assumes no change point.
+#' @param m An optional integer specifying the expected number of change points (used when \code{method = "oracle"}).
+#'          If not supplied, it is inferred from \code{type}.
+#' @param trim A positive integer specifying the trimming parameter. Only intervals of length greater than \code{2 * trim}
+#'             are considered for change point detection.
+#' @param threshold A numeric value specifying the fixed threshold. Must be provided when \code{method = "fixed"}.
+#' @param method A character string indicating the selection method. One of \code{"fixed"} or \code{"oracle"}.
+#' @param V.diag Logical. If \code{TRUE}, only the diagonal of the long-run covariance matrix is used for standardisation.
+#' @param lrv Logical. If \code{TRUE}, long-run variance is estimated using HAC weights.
+#' @param lbd Optional numeric value specifying the minimum interval length for seeding.
 #'
-#' @return A data frame containing the detected change points along with associated statistics. For the oracle
-#'         method, additional columns \code{selected_threshold}, \code{next_highest_threshold}, and
-#'         \code{no_change_threshold} are appended.
+#' @return A data frame containing the estimated change points and corresponding statistics. The columns include:
+#' \describe{
+#'   \item{est.cp}{Estimated location of the change point.}
+#'   \item{val}{CUSUM statistic value at the detected point.}
+#'   \item{st}{Start index of the interval.}
+#'   \item{ed}{End index of the interval.}
+#'   \item{trim}{Trimming parameter used.}
+#' }
+#' If \code{method = "oracle"}, additional columns are returned:
+#' \describe{
+#'   \item{selected_threshold}{Threshold value that produced exactly \code{m} change points.}
+#'   \item{next_highest_threshold}{Next largest threshold.}
+#'   \item{no_change_threshold}{Maximum threshold that leads to no change point detection.}
+#' }
 #'
-#' @export
+#' @details
+#' This function operates in two modes:
+#' \itemize{
+#'   \item \strong{Fixed}: Retains change points where the CUSUM statistic exceeds a user-specified threshold.
+#'   \item \strong{Oracle}: Iteratively searches for the highest threshold yielding exactly \code{m} non-overlapping change points.
+#' }
+#' The underlying CUSUM statistics are computed via \code{\link{cusum.fts}}, and overlap between candidate points is removed
+#' using interval exclusion.
+#'
+#' @seealso \code{\link{cusum.fts}}, \code{\link{find_single_cp}}
 #'
 #' @examples
 #' \dontrun{
-#' # Assuming F_hat is a matrix with time series data as columns:
-#' results_fixed <- NotSBS_not(F_hat = F_hat, m = 3, type = c(4,1,2), beta = 0.5, trim = 10,
-#'                             threshold = 5, method = "fixed",
-#'                             V_shap = "diag", lbd = 20)
+#' # Simulated matrix with time series signals
+#' p <- 100; T <- 400
+#' F_hat <- matrix(rnorm(p * T), nrow = p)
 #'
-#' results_oracle <- NotSBS_not(F_hat = F_hat, m = 3, type = c(4,1,2), beta = 0.5, trim = 10,
-#'                              method = "oracle",
-#'                              V_shap = "diag", lbd = 20)
+#' # Fixed threshold method
+#' results_fixed <- NotSBS(x = F_hat, m = 3, type = c(4,1,2), trim = 12,
+#'                         threshold = 5, method = "fixed",
+#'                         V.diag = TRUE, lrv = TRUE, lbd = 20)
+#'
+#' # Oracle method
+#' results_oracle <- NotSBS(x = F_hat, m = 3, type = c(4,1,2), trim = 12,
+#'                          method = "oracle",
+#'                          V.diag = TRUE, lrv = TRUE, lbd = 20)
 #' }
+#'
+#' @export
 
-NotSBS_not <- function(F_hat, m = NULL, type = NULL, beta = NULL, trim = NULL, threshold = NULL,
-                       method = c("fixed", "oracle", "none"),
-                       V_shap = NULL, lbd = NULL) {
+NotSBS <- function(x, type = NULL, m = 3, trim, threshold = NULL,
+                   method = c("fixed", "oracle"),
+                   V.diag = TRUE, lrv = TRUE, lbd = NULL) {
+
   method <- match.arg(method)
-
-  Time <- ncol(F_hat)
+  Time <- ncol(x)
 
   if (is.null(trim)) {
     stop("Must supply 'trim'.")
   }
 
-  if (!is.null(V_shap)) {
-    V_shap <- match.arg(V_shap, choices = c("diag", "full", "non"))
-    long_run_V_est <- long_run_V(F_hat, Time)
-
-    if (V_shap == "full") {
-      V <- long_run_V_est$V_full
-    } else if (V_shap == "diag") {
-      V <- long_run_V_est$V_diag
-    } else if (V_shap == "non") {
-      V <- long_run_V_est$V_non
-    }
-  } else {
-    V <- NULL
-  }
-
-
-  # seeded intervals with min length = 2*trim + 2
-  #intervals <- seeded_intervals(Time, a = 0.5^(beta), minl = 2 * trim + 2)
-  #intervals <- seeded_intervals(Time, minl = 2 * trim + 2)
-  # perform best at (6 * trim + 2)
-  intervals <- seeded_intervals(Time, minl = lbd)
-
-  results <- data.frame()
-  for (i in seq_len(nrow(intervals))) {
-    st <- intervals$st[i]
-    ed <- intervals$ed[i]
-
-    if ((ed - st) > 2 * trim) {
-      res <- find_single_cp_std(F_hat, st, ed, trim, V)
-      results <- rbind(results, res)
-    }
-  }
-
-  results <- results[results$est.cp > trim & results$est.cp < (Time - trim), ]
+  results <- cusum.fts(x, V.diag = V.diag, lrv = lrv, trim = trim, lbd = lbd)
   results <- results[order(results$ed - results$st, decreasing = FALSE), ]
-
-  #if (nrow(results) == 0) {
-  # warning("No intervals are long enough; no candidate change points found.")
-  #return(results)
-  #}
 
   # Method!
   if (method == "fixed") {
@@ -97,16 +83,7 @@ NotSBS_not <- function(F_hat, m = NULL, type = NULL, beta = NULL, trim = NULL, t
       stop("Must supply 'threshold'.")
     }
 
-    #results <- results[results$val >= threshold, ]
-    # note that we change it to lager but not equal for "exceeding" the NH
     results <- results[results$val >= threshold + 5e-3, ]
-    # Change ordering to be consistent with the oracle method:
-    #results <- results[order(results$val, decreasing = TRUE), ]
-
-    #if (nrow(results) == 0) {
-    # warning("No intervals exceed the given threshold.")
-    #return(results)
-    #}
 
     cid <- 0
     selected_indices <- integer()
@@ -126,9 +103,8 @@ NotSBS_not <- function(F_hat, m = NULL, type = NULL, beta = NULL, trim = NULL, t
 
 
   } else if (method == "oracle") {
-    if (is.null(m)) {
-      if (identical(type, 0)) { m <- 0 } else { m <- length(type) }
-    }
+    if (is.null(m)){
+      if (identical(type, 0)) { m <- 0 } else { m <- length(type) }}
 
     thds <- sort(results$val, decreasing = TRUE)
     selected_threshold <- NA
@@ -156,6 +132,7 @@ NotSBS_not <- function(F_hat, m = NULL, type = NULL, beta = NULL, trim = NULL, t
         selected_solution <- aux
         S <- selected_solution$est.cp
 
+        # === Updated logic for next_highest_threshold ===
         for (j in (i + 1):length(thds)) {
           candidate_thd <- thds[j]
           candidate_intervals <- results[results$val == candidate_thd, ]
@@ -173,6 +150,7 @@ NotSBS_not <- function(F_hat, m = NULL, type = NULL, beta = NULL, trim = NULL, t
           if (!is.null(next_highest_threshold)) break
         }
 
+
         results <- selected_solution
         break
       }
@@ -184,8 +162,7 @@ NotSBS_not <- function(F_hat, m = NULL, type = NULL, beta = NULL, trim = NULL, t
     results <- results[order(results$est.cp), ]
   }
 
-
-
   rownames(results) <- NULL
   return(results)
 }
+

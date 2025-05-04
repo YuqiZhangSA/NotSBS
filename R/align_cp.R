@@ -1,4 +1,4 @@
-#' Align Estimated change points with Ground Truth
+#' Align Estimated Change Points with True Change Points
 #'
 #' Matches estimated change points to true ones within specified tolerance-based alignment zones
 #' and computes signed deviations. Each estimated point can be matched to at most one true point.

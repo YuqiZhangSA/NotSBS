@@ -32,8 +32,7 @@ the aligned deviations between detected and true change points across simulation
 }
 \description{
 Evaluates accuracy and deviation metrics of estimated change points across multiple simulations,
-comparing them against ground truth. Reports how often the number of detected change points matches
-or deviates from the true number, as well as detection rate and localisation accuracy.
+comparing them against true changes.
 }
 \details{
 For each true change point, the function uses \code{\link{align_change_points}} to match the closest
@@ -53,7 +52,7 @@ and frequencies of \code{m_est - m} values (\code{0}, \code{±1}, \code{≥2}, \
 theta <- c(80, 160, 240)
 cp_list <- replicate(100, sort(sample(1:300, 3)), simplify = FALSE)
 compute_stats(Time = 300, theta = theta, detected_cp_list = cp_list,
-              trim = log(300), num_simulations = 100, method_name = "TestMethod")
+              trim = round(2*log(Time)), num_simulations = 100, method_name = "fixed")
 }
 
 }

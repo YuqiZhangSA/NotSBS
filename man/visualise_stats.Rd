@@ -30,8 +30,7 @@ visualise_stats(
 No return value. A histogram is generated as a side effect.
 }
 \description{
-Produces a histogram of scaled estimated change points across multiple simulations, overlaying the true change points
-and tolerance bands for visual assessment of detection accuracy.
+Produces a histogram of scaled estimated change points across multiple simulations.
 }
 \details{
 The function visualises the empirical distribution of estimated change points after scaling to the \eqn{[0, 1]} interval.

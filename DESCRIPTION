@@ -1,10 +1,12 @@
 Package: NotSBS
-Title: Narrowest-over-threshold & Seeded Binary Segmentation for Change Point Detection in Factor Models
+Title: Narrowest-over-Threshold and Seeded Binary Segmentation for Change Point Detection in Factor Models
 Version: 0.1.0
-Authors: 
-    person("Yuqi", "Zhang", email = "yuqi.zhang@bristol.ac.uk")
-Description: Implements the NotSBS procedure for detecting multiple change points in large approximate factor models. Includes simulation designs, model selection routines, plotting functions, and evaluation metrics inspired by recent work on high-dimensional structural change.
-License: 
+Authors@R: 
+    person("Yuqi", "Zhang", email = "yuqi.zhang@bristol.ac.uk", role = c("aut", "cre"))
+Description: Implements the NotSBS procedure for detecting multiple change points in large approximate factor models. 
+    The package provides simulation designs, model selection routines, plotting functions, and evaluation metrics inspired 
+    by recent developments in high-dimensional structural change point analysis.
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
@@ -17,4 +19,6 @@ Imports:
     dplyr,
     ggplot2,
     magrittr,
-    tidyr
+    tidyr,
+    mvtnorm
+

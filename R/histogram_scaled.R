@@ -1,7 +1,6 @@
 #' Visualise Distribution of Estimated change points across Simulations
 #'
-#' Produces a histogram of scaled estimated change points across multiple simulations, overlaying the true change points
-#' and tolerance bands for visual assessment of detection accuracy.
+#' Produces a histogram of scaled estimated change points across multiple simulations.
 #'
 #' @param detected_cp_list A list of numeric vectors, where each vector contains the estimated change points from a single simulation.
 #' @param theta A numeric vector of true change point locations.

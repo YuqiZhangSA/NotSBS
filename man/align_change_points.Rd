@@ -2,7 +2,7 @@
 % Please edit documentation in R/align_cp.R
 \name{align_change_points}
 \alias{align_change_points}
-\title{Align Estimated change points with Ground Truth}
+\title{Align Estimated Change Points with True Change Points}
 \usage{
 align_change_points(estimated_points, true_points, Time, tolerance = 50)
 }

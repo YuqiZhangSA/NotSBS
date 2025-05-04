@@ -14,31 +14,14 @@ theta_coef <- c(max(0.5-10*log(Time)/Time,0.42),0.5,0.5+6*sqrt(Time)/Time)
 # Data Generating Process
 data_sim <- duan_dgp(Time = Time, p = p, type = c(4,1,2), dep = TRUE, seed = 900, theta_coef = theta_coef)
 trim <- round(2 * log(Time))
-threshold <- 12.53
-
-# Estimate Factor Numbers and Factors
-X_t <- data_sim$x
-r <- median(abc.factor.number(X_t)$r[4:6])
-factor_estimates <- estimate_factors(X_t, r)
-F_hat <- factor_estimates$F_t
-
-# LRV (long-run variance)
-V <- long_run_V(F_hat, Time)$V_diag
+threshold <- 7.5
 
 # Generate Seeded Intervals
 lbd <- round(dim(X_t)[2]^(max(2/5, 1 - min(1, log(dim(X_t)[1])/log(dim(X_t)[2])))) * log(dim(X_t)[2])^1.1)
 intervals <- seeded_intervals(Time, minl = lbd)
 
 # Candidates - via Seeded Intervals
-results <- data.frame()
-for (i in seq_len(nrow(intervals))) {
-  st <- intervals$st[i]
-  ed <- intervals$ed[i]
-  if ((ed - st) > 2 * trim) {
-    res <- find_single_cp_std(F_hat, st, ed, trim, V)
-    results <- rbind(results, res)
-  }
-}
+results <- cusum.fts(data_sim$x, V.diag = TRUE, lrv = TRUE, trim = trim, lbd = lbd)
 results <- results[results$est.cp > trim & results$est.cp < (Time - trim), ]
 results <- results[order(results$ed - results$st, decreasing = FALSE), ]
 
@@ -47,7 +30,7 @@ plots_oracle <- plot_NotSBS_iterations(results, Time, m = 3, trim = trim, thresh
 for (p in plots_oracle) print(p)
 
 # Use the derived (NH,ST] to choose threshold
-plots_fixed <- plot_NotSBS_iterations(results, Time, m = 3, trim = trim, threshold = 12.53, method = "fixed", c(max(0.5-10*log(Time)/Time,0.42),0.5,0.5+6*sqrt(Time)/Time))
+plots_fixed <- plot_NotSBS_iterations(results, Time, m = 3, trim = trim, threshold = threshold, method = "fixed", c(max(0.5-10*log(Time)/Time,0.42),0.5,0.5+6*sqrt(Time)/Time))
 for (p in plots_fixed) print(p)
 
 

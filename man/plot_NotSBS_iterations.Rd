@@ -40,6 +40,6 @@ across iterations of threshold selection, either using a fixed threshold or an o
 \examples{
 \dontrun{
 # Assuming `df` is a properly formatted result data frame with st, ed, val, est.cp
-plot_NotSBS_iterations(results = df, Time = 300, m = 3, trim = 10, method = "oracle")
+plot_NotSBS_iterations(results = df, Time = 400, m = 3, trim = 12, method = "oracle")
 }
 }
