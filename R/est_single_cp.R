@@ -38,25 +38,30 @@ cusum.fts <- function(x, r = NULL,
                       V.diag = TRUE, lrv = TRUE,
                       n = NULL,
                       trim, lbd = NULL) {
-
   p <- nrow(x)
   Time <- ncol(x)
   if (is.null(r)) {r <- median(abc.factor.number(x)$r[4:6])}
   if (is.null(lbd)) {lbd <- round(dim(x)[2]^(max(2/5, 1 - min(1, log(dim(x)[1])/log(dim(x)[2])))) * log(dim(x)[2])^1.1)}
   if (is.null(n)) {n <- floor(dim(x)[2]^0.25)}
+  #if (is.null(trim)) trim <- 2 * round(log(Time))
   d <- r * (r + 1) / 2
 
-  sv <- svd(x, nu = 0, nv = r)
-  f_hat <- t(sv$v) * sqrt(Time)
+  #sv <- svd(x, nu = 0, nv = r); f_hat <- t(sv$v) * sqrt(Time)
+  sv <- svd(x, nu =r, nv = 0); f_hat <- (t(sv$u) %*% x / sqrt(p))
+  # sv <- svd(x, nu = r, nv = 0); svals <- sv$d[1:r]; f_hat <- sweep(t(sv$u) %*% x, 1, svals, "/") * sqrt(Time)
+
   ind <- lower.tri(diag(r), diag = TRUE)
+  covF <- f_hat %*% t(f_hat) / Time
+  mean_vec <- covF[ind]
   ff <- matrix(0, nrow = d, ncol = Time)
   II <- diag(1, r)[ind]
+
   for (t in seq_len(Time)) {
     ftft <- f_hat[,t] %*% t(f_hat[,t])
-    ff[,t] <- (ftft[ind] - II)
+    #ff[,t] <- (ftft[ind]-II)
+    ff[,t] <- ftft[ind] - mean_vec
   }
 
-  # long‐run variance
   V <- ff %*% t(ff) / Time # Gamma(0)
   if (lrv && n >= 1) {
     for (ell in 1:n) {
@@ -70,6 +75,7 @@ cusum.fts <- function(x, r = NULL,
   if (V.diag) {
     dd <- diag(V)
     if (min(dd) <= 0) {
+      # replace negative or zero by smallest positive
       posmin <- min(dd[dd>0])
       dd     <- pmax(dd, posmin)
       flag   <- TRUE
@@ -86,7 +92,7 @@ cusum.fts <- function(x, r = NULL,
     Vhalf_inv <- diag(1/sqrt(dd), d) %*% t(eig$vectors)
   }
 
-  D <- Vhalf_inv %*% ff    # d * Time
+  D <- Vhalf_inv %*% ff    # d x Time
 
   intervals <- seeded_intervals(Time, minl = lbd)
   results <- data.frame()
@@ -101,6 +107,7 @@ cusum.fts <- function(x, r = NULL,
 
   return(results)
 }
+
 
 
 
