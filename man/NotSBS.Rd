@@ -6,6 +6,7 @@
 \usage{
 NotSBS(
   x,
+  r = NULL,
   type = NULL,
   m = 3,
   trim,

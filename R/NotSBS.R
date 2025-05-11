@@ -62,7 +62,7 @@
 #'
 #' @export
 
-NotSBS <- function(x, type = NULL, m = 3, trim, threshold = NULL,
+NotSBS <- function(x, r = NULL, type = NULL, m = 3, trim, threshold = NULL,
                    method = c("fixed", "oracle"),
                    V.diag = TRUE, lrv = TRUE, lbd = NULL) {
 
